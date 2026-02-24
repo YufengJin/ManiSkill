@@ -1,0 +1,26 @@
+services:
+  maniskill:
+    container_name: maniskill_container
+    image: ${IMAGE:-maniskill:latest}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    network_mode: host
+    pid: host
+    volumes:
+      - ../:/workspace
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    environment:
+      - GPU=${GPU:-all}
+      - MS_ASSET_DIR=/workspace/.maniskill
+      - MS_SKIP_ASSET_DOWNLOAD_PROMPT=1
+    command: tail -f /dev/null
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

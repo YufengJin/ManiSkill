@@ -33,6 +33,7 @@ imgui.ini
 # but can be excluded explicitly
 /tmp
 /data
+.maniskill
 /demos
 /videos
 /examples/benchmarking/videos
@@ -44,3 +45,6 @@ imgui.ini
 # testing
 .coverage*
 htmlcov/
+
+eval_logs/
+demo_log/
