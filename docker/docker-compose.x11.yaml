@@ -1,6 +1,6 @@
 services:
   maniskill:
-    container_name: maniskill_container
+    container_name: maniskill-x11
     image: ${IMAGE:-maniskill:latest}
     build:
       context: ..
