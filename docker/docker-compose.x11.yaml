@@ -6,7 +6,6 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     network_mode: host
-    pid: host
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ../:/workspace

@@ -6,8 +6,12 @@ Runs the ManiSkill simulation loop and delegates action inference to a remote
 Policy Server over WebSocket. Client sends ManiSkill obs converted to policy format.
 Logs and videos are written to: <log_dir>/<env_id>--<YYYYMMDD_HHMMSS>/
 
+Runnable task count is dynamic (REGISTERED_ENVS minus EVAL_TASK_BLACKLIST in mani_skill.utils.run_utils).
+Print the current list with: python scripts/run_eval.py --list_tasks
+
 Usage:
     python scripts/run_eval.py --env_id PickCube-v1 --policy_server_addr localhost:8000
+    python scripts/run_eval.py --list_tasks
 """
 
 import argparse
@@ -24,7 +28,6 @@ import signal
 import time
 from datetime import datetime
 
-import imageio
 import numpy as np
 
 from mani_skill.utils.run_utils import (
@@ -37,14 +40,16 @@ from mani_skill.utils.run_utils import (
     set_seed_everywhere,
 )
 
-try:
-    from policy_websocket import WebsocketClientPolicy
-except ImportError:
-    raise ImportError(
-        "policy-websocket is required for run_eval. "
-        "Install with: pip install policy-websocket "
-        "or: pip install 'policy-websocket @ git+https://github.com/YufengJin/policy_websocket.git'"
-    )
+def _websocket_policy_class():
+    try:
+        from policy_websocket import WebsocketClientPolicy
+    except ImportError as e:
+        raise ImportError(
+            "policy-websocket is required for run_eval. "
+            "Install with: pip install policy-websocket "
+            "or: pip install 'policy-websocket @ git+https://github.com/YufengJin/policy_websocket.git'"
+        ) from e
+    return WebsocketClientPolicy
 
 
 def log(msg: str, log_file=None):
@@ -78,6 +83,8 @@ def save_rollout_video(
     output_dir,
 ):
     """Save a concatenated MP4 of primary | secondary | wrist camera views."""
+    import imageio
+
     os.makedirs(output_dir, exist_ok=True)
     tag = (
         task_description.lower()
@@ -312,6 +319,11 @@ def parse_args():
         action="store_false",
         dest="save_video",
     )
+    parser.add_argument(
+        "--list_tasks",
+        action="store_true",
+        help="Print runnable env_id count and sorted list, then exit",
+    )
 
     return parser.parse_args()
 
@@ -319,10 +331,16 @@ def parse_args():
 def main():
     args = parse_args()
 
-    all_tasks = set(get_available_tasks())
-    if args.env_id not in all_tasks:
+    all_tasks = sorted(get_available_tasks())
+    if args.list_tasks:
+        print(f"ManiSkill runnable tasks: {len(all_tasks)} (see EVAL_TASK_BLACKLIST in run_utils.py)")
+        for eid in all_tasks:
+            print(f"  {eid}")
+        return
+    all_tasks_set = set(all_tasks)
+    if args.env_id not in all_tasks_set:
         raise ValueError(
-            f"Unknown env_id: {args.env_id}. Available: {sorted(all_tasks)}"
+            f"Unknown env_id: {args.env_id}. Available: {all_tasks}"
         )
 
     set_seed_everywhere(args.seed, deterministic=args.deterministic)
@@ -356,6 +374,7 @@ def main():
         host, port = addr, 8000
 
     log(f"Connecting to policy server at ws://{host}:{port} ...", log_file)
+    WebsocketClientPolicy = _websocket_policy_class()
     policy = WebsocketClientPolicy(host=host, port=port)
     metadata = policy.get_server_metadata()
     log(f"Server metadata: {metadata}", log_file)

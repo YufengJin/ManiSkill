@@ -70,6 +70,10 @@ RUN micromamba run -n maniskill python -m pip install --upgrade pip \
 RUN micromamba run -n maniskill python -m pip install torch
 RUN micromamba run -n maniskill python -m pip install --upgrade mani_skill==3.0.0b22
 
+# WebSocket client for scripts/run_demo.py, run_eval.py, replay_demo.py
+RUN micromamba run -n maniskill python -m pip install \
+    "policy-websocket @ git+https://github.com/YufengJin/policy_websocket.git"
+
 # ---------------------------------------------------------
 # Vulkan ICD config (required for GPU rendering in container)
 # https://github.com/haosulab/ManiSkill/issues/9

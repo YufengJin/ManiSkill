@@ -6,7 +6,6 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     network_mode: host
-    pid: host
     volumes:
       - ../:/workspace
     working_dir: /workspace

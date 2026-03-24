@@ -63,6 +63,8 @@ docker-compose -f docker-compose.headless.yaml up
 docker exec -it maniskill_container bash
 ```
 
+X11 与 headless 使用同一容器名 `maniskill_container`（与 LIBERO 的 `libero_container` 用法一致）；不要同时启动两个 compose，否则会名称冲突。
+
 ## Test Installation
 
 Inside the container, activate the environment and run the demo:
@@ -81,6 +83,14 @@ With GUI (X11 mode only):
 
 ```bash
 python -m mani_skill.examples.demo_random_action -e PickCube-v1 --render-mode=human
+```
+
+## View Logs
+
+```bash
+docker logs maniskill_container
+# 或实时跟踪
+docker logs -f maniskill_container
 ```
 
 ## Stop Container
@@ -163,6 +173,8 @@ Inside Docker, the NVIDIA driver is provided by the NVIDIA Container Toolkit. Vu
 ### X11 permission denied
 
 ```bash
+xhost +local:docker
+# 若仍失败可尝试:
 xhost +local:root
 ```
 
@@ -191,8 +203,17 @@ docker stop maniskill_container
 docker rm maniskill_container
 ```
 
+### Orphan containers warning
+
+若 compose 项目名变更后出现其他服务的 orphan 提示，可清理：
+
+```bash
+docker-compose -f docker-compose.x11.yaml up -d --remove-orphans
+```
+
 ## Notes
 
 - X11 mode requires a running X server and `xhost` access for Docker
 - First build can take a while (PyTorch, ManiSkill, PhysX)
-- When the ManiSkill source is mounted at `/workspace`, the entrypoint installs it in editable mode (`pip install -e .`)
+- `/workspace` 挂载为仓库根目录（`../:/workspace`，与 LIBERO 相同）；启动时 entrypoint 会对挂载的源码执行 `pip install -e`
+- 可在 `docker-compose*.yaml` 中增加 `volumes` 以持久化数据或挂载额外目录
