@@ -74,6 +74,14 @@ RUN micromamba run -n maniskill python -m pip install --upgrade mani_skill==3.0.
 RUN micromamba run -n maniskill python -m pip install \
     "policy-websocket @ git+https://github.com/YufengJin/policy_websocket.git"
 
+# Video writer (mandatory per benchmark-env-generator skill; --save_video requires this)
+RUN micromamba run -n maniskill python -m pip install "imageio[ffmpeg]"
+
+# RL stack: stable-baselines3 + hydra-core for scripts/train_rl_policy.py (sb3 mode)
+RUN micromamba run -n maniskill python -m pip install \
+    "stable-baselines3[extra]" \
+    "hydra-core>=1.3"
+
 # ---------------------------------------------------------
 # Vulkan ICD config (required for GPU rendering in container)
 # https://github.com/haosulab/ManiSkill/issues/9

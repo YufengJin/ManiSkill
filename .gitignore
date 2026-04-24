@@ -46,5 +46,5 @@ imgui.ini
 .coverage*
 htmlcov/
 
-eval_logs/
-demo_log/
+logs/
+.sb3_checkpoints/

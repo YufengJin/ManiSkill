@@ -54,6 +54,14 @@ def _websocket_policy_class():
     return WebsocketClientPolicy
 
 
+def log(msg: str, log_file=None):
+    """Print a message and optionally write it to a log file (flush after each write)."""
+    print(msg)
+    if log_file is not None:
+        log_file.write(msg + "\n")
+        log_file.flush()
+
+
 def _create_env(
     args,
     seed=None,
@@ -249,10 +257,22 @@ def parse_args():
         help="Enable interactive GUI rendering (default: headless no_gui)",
     )
     parser.add_argument(
-        "--demo_log_dir",
+        "--log_dir",
         type=str,
-        default="./demo_log",
-        help="Directory for saved videos in no_gui mode",
+        default="./logs",
+        help="Per-run demo dir: <log_dir>/demo/<env_id>--<YYYYMMDD_HHMMSS>/",
+    )
+    parser.add_argument(
+        "--save_video",
+        action="store_true",
+        default=True,
+        help="Save MP4 in no_gui mode (default on; requires imageio[ffmpeg])",
+    )
+    parser.add_argument(
+        "--no_save_video",
+        action="store_false",
+        dest="save_video",
+        help="Disable MP4 capture",
     )
     parser.add_argument(
         "--list_tasks",
@@ -278,7 +298,7 @@ def main():
 
     set_seed_everywhere(args.seed, deterministic=args.deterministic)
     use_gui = args.gui
-    save_video = not use_gui
+    save_video = args.save_video and not use_gui
     task_description = get_task_description(args.env_id)
 
     addr = args.policy_server_addr
@@ -288,52 +308,76 @@ def main():
     else:
         host, port = addr, 8000
 
-    print("=" * 60)
-    print("ManiSkill Demo (run policy in sim, no eval)")
-    print("=" * 60)
-    print(f"  env_id:       {args.env_id}")
-    print(f"  num_resets:   {args.num_resets}")
-    print(f"  policy:       {args.policy}")
-    print(f"  robot_uids:   {args.robot_uids}")
-    print(f"  policy_server: ws://{host}:{port}")
-    print(f"  GUI:          {'on (--gui)' if use_gui else 'off (no_gui, videos saved)'}")
-    if not use_gui:
-        date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        run_dir = os.path.join(args.demo_log_dir, f"{args.env_id}--{date_str}")
-        os.makedirs(run_dir, exist_ok=True)
-        args._run_dir = run_dir
-        print(f"  demo_log_dir:  {run_dir}")
-    print("=" * 60)
+    # Per-run log dir (always created, contains demo.log + MP4s when --save_video on)
+    date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = os.path.join(args.log_dir, "demo", f"{args.env_id}--{date_str}")
+    os.makedirs(run_dir, exist_ok=True)
+    args._run_dir = run_dir
+    log_path = os.path.join(run_dir, "demo.log")
+    log_file = open(log_path, "w", encoding="utf-8")
+
+    log("=" * 60, log_file)
+    log("ManiSkill Demo (run policy in sim, no eval)", log_file)
+    log("=" * 60, log_file)
+    log(f"  env_id:        {args.env_id}", log_file)
+    log(f"  num_resets:    {args.num_resets}", log_file)
+    log(f"  policy:        {args.policy}", log_file)
+    log(f"  robot_uids:    {args.robot_uids}", log_file)
+    log(f"  obs_mode:      {args.obs_mode}", log_file)
+    log(f"  img_res:       {args.img_res}", log_file)
+    log(f"  seed:          {args.seed}", log_file)
+    log(f"  deterministic: {args.deterministic}", log_file)
+    log(f"  policy_server: ws://{host}:{port}", log_file)
+    log(f"  GUI:           {'on (--gui)' if use_gui else 'off (headless)'}", log_file)
+    log(f"  save_video:    {save_video}", log_file)
+    log(f"  log_dir:       {run_dir}", log_file)
+    log(f"  log_file:      {log_path}", log_file)
+    log("=" * 60, log_file)
 
     WebsocketClientPolicy = _websocket_policy_class()
     policy = WebsocketClientPolicy(host=host, port=port)
     metadata = policy.get_server_metadata()
-    print(f"Server metadata: {metadata}")
+    log(f"Server metadata: {metadata}", log_file)
     replay_mode = metadata.get("replay_mode") or metadata.get("policy_name") == "ReplayPolicy"
     if replay_mode:
-        print("Replay mode: using trajectory reset_kwargs, control_mode, num_wait_steps=0")
+        log("Replay mode: using trajectory reset_kwargs, control_mode, num_wait_steps=0", log_file)
     if metadata.get("env_id") and metadata["env_id"] != args.env_id:
-        print(
+        log(
             f"WARNING: Server env_id={metadata['env_id']} but run_demo env_id={args.env_id}. "
-            "They must match for replay_demo."
+            "They must match for replay_demo.",
+            log_file,
         )
 
     env = None
+    _log_closed = {"closed": False}
+
+    def _close_log():
+        if not _log_closed["closed"]:
+            try:
+                log_file.close()
+            except Exception:
+                pass
+            _log_closed["closed"] = True
 
     def _cleanup(signum=None, frame=None):
-        print("\nCleaning up ...", flush=True)
+        log("\nCleaning up ...", log_file if not _log_closed["closed"] else None)
         if env is not None:
             try:
                 env.close()
             except Exception:
                 pass
-        policy.close()
+        try:
+            policy.close()
+        except Exception:
+            pass
+        _close_log()
         sys.stdout.flush()
         sys.stderr.flush()
         os._exit(1 if signum else 0)
 
     signal.signal(signal.SIGINT, _cleanup)
     signal.signal(signal.SIGTERM, _cleanup)
+    atexit.register(_close_log)
     atexit.register(policy.close)
 
     try:
@@ -396,14 +440,18 @@ def main():
                     ep_idx,
                     success,
                     task_description,
-                    output_dir=getattr(args, "_run_dir", args.demo_log_dir),
+                    output_dir=getattr(args, "_run_dir", args.log_dir),
                 )
             env.close()
             env = None
     finally:
-        policy.close()
+        try:
+            policy.close()
+        except Exception:
+            pass
+        _close_log()
 
-    print("\nDone.")
+    log("\nDone.", log_file if not _log_closed["closed"] else None)
 
 
 if __name__ == "__main__":

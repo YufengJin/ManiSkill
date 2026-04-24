@@ -1,0 +1,25 @@
+# @package _global_
+# TD3 defaults for stable-baselines3 on ManiSkill.
+algo: td3
+env_id: PickCube-v1
+total_timesteps: 1_000_000
+n_envs: 1
+
+learning_rate: 1.0e-3
+buffer_size: 1_000_000
+learning_starts: 10_000
+batch_size: 100
+tau: 0.005
+gamma: 0.99
+train_freq: 1
+gradient_steps: 1
+policy_delay: 2
+target_policy_noise: 0.2
+target_noise_clip: 0.5
+
+policy: MlpPolicy
+policy_kwargs:
+  net_arch: [400, 300]
+
+checkpoint_dir: /workspace/.sb3_checkpoints/${algo}
+wandb: null

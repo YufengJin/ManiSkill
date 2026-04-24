@@ -1,0 +1,4 @@
+- env_id=PickCube-v1
+- total_timesteps=5000
+- n_envs=1
+- wandb=null

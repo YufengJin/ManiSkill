@@ -1,6 +1,6 @@
 services:
   maniskill:
-    container_name: maniskill-x11
+    container_name: maniskill_container
     image: ${IMAGE:-maniskill:latest}
     build:
       context: ..
@@ -9,6 +9,7 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ../:/workspace
+      - ~/.cache/huggingface:/root/.cache/huggingface
     working_dir: /workspace
     stdin_open: true
     tty: true
@@ -17,6 +18,8 @@ services:
       - GPU=${GPU:-all}
       - MS_ASSET_DIR=/workspace/.maniskill
       - MS_SKIP_ASSET_DOWNLOAD_PROMPT=1
+      - XDG_RUNTIME_DIR=/tmp/runtime-root
+      - QT_X11_NO_MITSHM=1
     command: tail -f /dev/null
     deploy:
       resources:

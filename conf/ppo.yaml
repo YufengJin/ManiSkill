@@ -1,0 +1,26 @@
+# @package _global_
+# PPO defaults for stable-baselines3 on ManiSkill. Override via Hydra CLI:
+#   python scripts/train_rl_policy.py --config-name ppo total_timesteps=5_000_000 learning_rate=1e-4
+algo: ppo
+env_id: PickCube-v1
+total_timesteps: 1_000_000
+n_envs: 1
+
+# PPO hyperparameters (sb3 defaults, lightly tuned for continuous control)
+learning_rate: 3.0e-4
+n_steps: 2048
+batch_size: 64
+n_epochs: 10
+gamma: 0.99
+gae_lambda: 0.95
+clip_range: 0.2
+ent_coef: 0.0
+vf_coef: 0.5
+max_grad_norm: 0.5
+
+policy: MlpPolicy
+policy_kwargs:
+  net_arch: [256, 256]
+
+checkpoint_dir: /workspace/.sb3_checkpoints/${algo}
+wandb: null
