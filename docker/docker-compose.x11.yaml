@@ -1,7 +1,7 @@
 services:
   maniskill:
     container_name: maniskill_container
-    image: ${IMAGE:-maniskill:latest}
+    image: ${IMAGE:-yufengjin/maniskill:latest}
     build:
       context: ..
       dockerfile: docker/Dockerfile
