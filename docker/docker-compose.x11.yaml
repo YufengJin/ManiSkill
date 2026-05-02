@@ -13,7 +13,7 @@ services:
       dockerfile: docker/Dockerfile
     # Default image tag for local from-scratch builds. Override with `IMAGE=...`
     # to point at a registry tag (e.g. `IMAGE=<hub-user>/maniskill:latest docker compose up`).
-    image: ${IMAGE:-maniskill:local}
+    image: ${IMAGE:-yufengjin/maniskill:latest}
     container_name: maniskill-gui
     restart: unless-stopped
     tty: true
