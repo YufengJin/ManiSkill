@@ -48,3 +48,5 @@ htmlcov/
 
 logs/
 .sb3_checkpoints/
+outputs/
+eval_logs/

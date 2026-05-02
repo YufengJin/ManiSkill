@@ -1,0 +1,59 @@
+{
+  "benchmark_name": "maniskill",
+  "schema_version": 1,
+  "captured_at": "2026-05-02T06:48:35+00:00",
+  "captured_from": {
+    "repo_path": "/home/yjin/repos/ManiSkill",
+    "env_id": "PickCube-v1",
+    "make_expr": "gym.make('PickCube-v1', num_envs=1, render_mode='rgb_array', obs_mode='rgbd')",
+    "category": "IL"
+  },
+  "obs_spec": {
+    "agent.qpos": {
+      "dtype": "float32",
+      "shape": [1, 9],
+      "kind": "proprio_joint"
+    },
+    "agent.qvel": {
+      "dtype": "float32",
+      "shape": [1, 9],
+      "kind": "proprio_velocity"
+    },
+    "sensor_data.base_camera.rgb": {
+      "dtype": "uint8",
+      "shape": [1, 128, 128, 3],
+      "kind": "image_primary"
+    },
+    "sensor_data.base_camera.depth": {
+      "dtype": "int16",
+      "shape": [1, 128, 128, 1],
+      "kind": "depth"
+    }
+  },
+  "action_spec": {
+    "shape": [8],
+    "dtype": "float32",
+    "low": [-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
+    "high": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    "controller": "CombinedController(arm=PDJointPosController, gripper=PDJointPosMimicController)",
+    "components": ["arm_0", "arm_1", "arm_2", "arm_3", "arm_4", "arm_5", "arm_6", "gripper"],
+    "gripper_convention": {
+      "open": 1,
+      "close": -1,
+      "binary": true,
+      "index": 7
+    }
+  },
+  "task_description_source": "<NONE>",
+  "step_signature": "5-tuple",
+  "smoke_test_passed": true,
+  "dropped_task_specific_keys": [
+    "extra.is_grasped",
+    "extra.tcp_pose",
+    "extra.goal_pos",
+    "sensor_param.base_camera.extrinsic_cv",
+    "sensor_param.base_camera.cam2world_gl",
+    "sensor_param.base_camera.intrinsic_cv"
+  ],
+  "extra_notes": "Captured 2026-05-02 by benchmark-generator on rerun. Cross-task verify: PickCube-v1 ↔ PushCube-v1 identical action_spec + filtered obs_spec. Gripper convention manually filled from prior verified entry: -1=close, +1=open at action[7]. Default observation includes agent.qpos/qvel proprio (9-DoF Panda) + base_camera RGBD (128x128). Action: 7 arm joint deltas + 1 binary gripper, all in [-1,1]."
+}

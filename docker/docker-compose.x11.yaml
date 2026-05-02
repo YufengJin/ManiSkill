@@ -1,30 +1,63 @@
+# X11 mode: supports GUI display (MuJoCo, matplotlib, etc.).
+#
+# Pre-requisite on host:  xhost +local:docker
+#
+# Usage:
+#   docker compose -f docker/docker-compose.x11.yaml up --build
+#   docker exec -it maniskill-gui bash
+
 services:
-  maniskill:
-    container_name: maniskill_container
-    image: ${IMAGE:-yufengjin/maniskill:latest}
+  maniskill-gui:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    network_mode: host
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - ../:/workspace
-      - ~/.cache/huggingface:/root/.cache/huggingface
-    working_dir: /workspace
-    stdin_open: true
+    # Default image tag for local from-scratch builds. Override with `IMAGE=...`
+    # to point at a registry tag (e.g. `IMAGE=<hub-user>/maniskill:latest docker compose up`).
+    image: ${IMAGE:-maniskill:local}
+    container_name: maniskill-gui
+    restart: unless-stopped
     tty: true
+    stdin_open: true
+
     environment:
       - DISPLAY=${DISPLAY}
-      - GPU=${GPU:-all}
-      - MS_ASSET_DIR=/workspace/.maniskill
-      - MS_SKIP_ASSET_DOWNLOAD_PROMPT=1
-      - XDG_RUNTIME_DIR=/tmp/runtime-root
       - QT_X11_NO_MITSHM=1
+      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      # Force matplotlib to a non-GUI backend. With DISPLAY set, matplotlib
+      # otherwise selects TkAgg → needs python3-tk which is not installed.
+      # Benchmark-native viewers (IsaacGym / MuJoCo / SAPIEN) use their own
+      # OpenGL / Vulkan stacks and are NOT affected.
+      - MPLBACKEND=Agg
+      - VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
+      # <<<EXTENSION_ENV_INSERT_ABOVE>>> — sub-skills insert env vars above this line
+
+    volumes:
+      - ..:/workspace/maniskill
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.Xauthority:/root/.Xauthority:rw
+      # <<<EXTENSION_VOLUME_INSERT_ABOVE>>> — sub-skills insert mounts above this line
+      # Add dataset mounts:
+      # - /path/to/datasets:/workspace/datasets:ro
+
+    network_mode: host
+    ipc: host
+    pid: host
+
     command: tail -f /dev/null
+
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [gpu, compute, utility]
+
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }
+      nproc: 65536
+      memlock: -1
+      stack: 67108864

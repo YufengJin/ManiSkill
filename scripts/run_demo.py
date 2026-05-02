@@ -10,9 +10,14 @@ Runnable task count is dynamic (REGISTERED_ENVS minus EVAL_TASK_BLACKLIST in man
 Print the current list with: python scripts/run_demo.py --list_tasks
 
 Usage:
-    python scripts/run_demo.py --env_id PickCube-v1 --policy_server_addr localhost:8000
-    python scripts/run_demo.py --gui --env_id PickCube-v1 --policy_server_addr localhost:8000
+    python scripts/run_demo.py --env_id PickCube-v1 --policy_server_addr localhost:8765
+    python scripts/run_demo.py --gui --env_id PickCube-v1 --policy_server_addr localhost:8765
     python scripts/run_demo.py --list_tasks
+
+Example
+-------
+    python scripts/run_demo.py --policy_server_addr localhost:8765 \
+        --env_id PickCube-v1 --num_resets 1
 """
 
 import argparse
@@ -138,6 +143,14 @@ def run_episode(
 
     for t in range(max_steps):
         observation = obs_to_policy_format(obs, task_description)
+        # Inject mandatory __meta__ envelope (per benchmark contract).
+        observation["__meta__"] = {
+            "v": 1,
+            "benchmark": "maniskill",
+            "task": str(args.env_id),
+            "task_description": task_description,
+            "phase": "step",
+        }
         if save_video and "robot0_agentview_left_image" in observation:
             p = observation["robot0_agentview_left_image"]
             s = observation.get("robot0_agentview_right_image", p)
@@ -195,8 +208,8 @@ def parse_args():
     parser.add_argument(
         "--policy_server_addr",
         type=str,
-        default="localhost:8000",
-        help="WebSocket policy server address host:port",
+        default="localhost:8765",
+        help="WebSocket policy server address host:port (default 8765 = policy_websocket lib default)",
     )
     parser.add_argument(
         "--policy",
@@ -306,7 +319,7 @@ def main():
         host, port = addr.rsplit(":", 1)
         port = int(port)
     else:
-        host, port = addr, 8000
+        host, port = addr, 8765
 
     # Per-run log dir (always created, contains demo.log + MP4s when --save_video on)
     date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -418,6 +431,13 @@ def main():
                 "action_high": action_high,
                 "task_name": args.env_id,
                 "task_description": task_description,
+                "__meta__": {
+                    "v": 1,
+                    "benchmark": "maniskill",
+                    "task": str(args.env_id),
+                    "task_description": task_description,
+                    "phase": "init",
+                },
             }
             policy.infer(init_obs)
 

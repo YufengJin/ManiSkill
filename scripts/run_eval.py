@@ -10,8 +10,13 @@ Runnable task count is dynamic (REGISTERED_ENVS minus EVAL_TASK_BLACKLIST in man
 Print the current list with: python scripts/run_eval.py --list_tasks
 
 Usage:
-    python scripts/run_eval.py --env_id PickCube-v1 --policy_server_addr localhost:8000
+    python scripts/run_eval.py --env_id PickCube-v1 --policy_server_addr localhost:8765
     python scripts/run_eval.py --list_tasks
+
+Example
+-------
+    python scripts/run_eval.py --policy_server_addr localhost:8765 \
+        --env_id PickCube-v1 --num_trials 1
 """
 
 import argparse
@@ -118,6 +123,14 @@ def run_episode(args, env, task_description, policy, episode_idx, log_file=None)
 
     for t in range(max_steps):
         observation = obs_to_policy_format(obs, task_description)
+        # Inject mandatory __meta__ envelope (per benchmark contract).
+        observation["__meta__"] = {
+            "v": 1,
+            "benchmark": "maniskill",
+            "task": str(args.env_id),
+            "task_description": task_description,
+            "phase": "step",
+        }
         if "robot0_agentview_left_image" in observation:
             p = observation["robot0_agentview_left_image"]
             s = observation.get("robot0_agentview_right_image", p)
@@ -193,6 +206,13 @@ def run_task(args, policy, log_file=None):
             "action_high": action_high,
             "task_name": args.env_id,
             "task_description": task_description,
+            "__meta__": {
+                "v": 1,
+                "benchmark": "maniskill",
+                "task": str(args.env_id),
+                "task_description": task_description,
+                "phase": "init",
+            },
         }
         policy.infer(init_obs)
 
@@ -245,8 +265,8 @@ def parse_args():
     parser.add_argument(
         "--policy_server_addr",
         type=str,
-        default="localhost:8000",
-        help="Address of the WebSocket policy server (host:port)",
+        default="localhost:8765",
+        help="Address of the WebSocket policy server (host:port; default 8765 = lib default)",
     )
     parser.add_argument(
         "--policy",
@@ -371,7 +391,7 @@ def main():
         host, port = addr.rsplit(":", 1)
         port = int(port)
     else:
-        host, port = addr, 8000
+        host, port = addr, 8765
 
     log(f"Connecting to policy server at ws://{host}:{port} ...", log_file)
     WebsocketClientPolicy = _websocket_policy_class()

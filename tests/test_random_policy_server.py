@@ -16,12 +16,12 @@ Headless by construction: no env, no dataset, no GUI — pure WebSocket server.
 Example
 -------
     # 1. Start the server (this file)
-    python tests/test_random_policy_server.py --port 8000
+    python tests/test_random_policy_server.py --port 8765
 
     # 2. In another terminal (or a second `docker exec`), run clients
-    python scripts/run_demo.py --policy_server_addr localhost:8000 \
+    python scripts/run_demo.py --policy_server_addr localhost:8765 \
         --env_id PickCube-v1 --num_resets 1
-    python scripts/run_eval.py --policy_server_addr localhost:8000 \
+    python scripts/run_eval.py --policy_server_addr localhost:8765 \
         --env_id PickCube-v1 --num_trials 1
 
 The `action_dim` advertised in metadata MUST match what the env expects
@@ -81,8 +81,8 @@ def main():
     )
     parser.add_argument("--host", default="0.0.0.0",
                         help="Bind address; default 0.0.0.0 (all interfaces)")
-    parser.add_argument("--port", type=int, default=8000,
-                        help="TCP port; default 8000")
+    parser.add_argument("--port", type=int, default=8765,
+                        help="TCP port; default 8765 (matches policy_websocket library default)")
     args = parser.parse_args()
 
     policy = RandomPolicy()

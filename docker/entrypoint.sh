@@ -1,37 +1,36 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -e
 
-cd /workspace
+# Sync sentinel for setup.sh (IsaacGym workflow). Harmless when no setup.sh
+# is reading it — just an empty file in /tmp that gets touched at end.
+rm -f /tmp/entrypoint_done
 
-# Determine ManiSkill project root (may be /workspace/ManiSkill when parent is mounted)
-MANISKILL_ROOT=""
-if [ -f /workspace/ManiSkill/setup.py ]; then
-  MANISKILL_ROOT="/workspace/ManiSkill"
-elif [ -f /workspace/setup.py ]; then
-  MANISKILL_ROOT="/workspace"
+export PATH="/opt/venv/bin:/usr/local/bin:${PATH:-/usr/bin:/bin}"
+export VIRTUAL_ENV="/opt/venv"
+
+# ── 1. Editable install (project mounted at /workspace/maniskill) ─────
+# Both branches resolve install_requires by default. If you need --no-deps
+# (e.g. to avoid uv re-resolving heavy science stack), add a `post_install_hooks`
+# entry to install_plan.json that re-runs the install with --no-deps.
+if [ -f "/workspace/maniskill/pyproject.toml" ]; then
+    echo ">> Installing editable package (pyproject.toml)..."
+    cd /workspace/maniskill && uv pip install -e . --index-strategy unsafe-best-match && cd - > /dev/null
+elif [ -f "/workspace/maniskill/setup.py" ]; then
+    echo ">> Installing editable package (setup.py)..."
+    cd /workspace/maniskill && uv pip install -e . --index-strategy unsafe-best-match && cd - > /dev/null
 fi
 
-# Install ManiSkill in editable mode when source is mounted
-if [ -n "${MANISKILL_ROOT}" ]; then
-  echo "Installing ManiSkill from ${MANISKILL_ROOT} (editable)..."
-  micromamba run -n maniskill pip install -e "${MANISKILL_ROOT}"
+# ── 2. Post-install hooks from InstallationPlan ──────────────────────────────
+# Rendered by render_base.py from <repo>/.nautilus/install_plan.json's
+# `post_install_hooks`. `when=first_run` entries are wrapped in a sentinel
+# guard; `when=every_run` entries fire on every container start.
 
-  if ! micromamba run -n maniskill python -c "import policy_websocket" 2>/dev/null; then
-    echo "Installing policy-websocket (for run_demo / run_eval / replay_demo)..."
-    micromamba run -n maniskill python -m pip install -q \
-      "policy-websocket @ git+https://github.com/YufengJin/policy_websocket.git"
-  fi
 
-  ASSET_DIR="${MS_ASSET_DIR:-${MANISKILL_ROOT}/.maniskill}"
-  if [ ! -d "${ASSET_DIR}" ] || [ -z "$(ls -A "${ASSET_DIR}" 2>/dev/null)" ]; then
-    echo "[INFO] No assets found under ${ASSET_DIR}."
-    echo "       Example: python -m mani_skill.utils.download_asset all -y"
-    echo "       Demos:   python -m mani_skill.utils.download_demo PickCube-v1"
-  fi
-fi
+# 
+# Slot for downstream sub-skills to inject project-specific steps.
 
-if [ $# -eq 0 ]; then
-  exec bash
-else
-  exec micromamba run -n maniskill "$@"
-fi
+# <<<EXTENSION_ENTRYPOINT_INSERT_ABOVE>>> — sub-skills insert pre-exec hooks above this line
+
+echo ">> Ready."
+touch /tmp/entrypoint_done
+exec "$@"

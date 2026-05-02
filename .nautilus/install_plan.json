@@ -1,0 +1,76 @@
+{
+  "primary_install_strategy": "uv-pip-editable",
+  "system_apt_packages": [
+    "libegl1",
+    "libosmesa6",
+    "libgl1",
+    "libglib2.0-0",
+    "libvulkan1",
+    "vulkan-tools",
+    "ffmpeg",
+    "xvfb"
+  ],
+  "third_party_clones": [],
+  "installation_steps": [
+    {
+      "kind": "apt_install",
+      "pkgs": [
+        "libegl1",
+        "libosmesa6",
+        "libgl1",
+        "libglib2.0-0",
+        "libvulkan1",
+        "vulkan-tools",
+        "ffmpeg",
+        "xvfb"
+      ]
+    },
+    {
+      "kind": "uv_pip_install",
+      "args": ["--no-deps", "setuptools>=62.3,<81"]
+    },
+    {
+      "kind": "uv_pip_install",
+      "args": ["torch", "--index-url", "https://download.pytorch.org/whl/cu128"]
+    },
+    {
+      "kind": "uv_pip_install",
+      "args": ["--upgrade", "mani_skill==3.0.0b22"]
+    },
+    {
+      "kind": "shell",
+      "cmd": "uv pip install 'policy-websocket @ git+https://github.com/YufengJin/policy_websocket.git' --index-strategy unsafe-best-match || true"
+    },
+    {
+      "kind": "uv_pip_install",
+      "args": ["--no-deps", "setuptools>=62.3,<81"]
+    },
+    {
+      "kind": "shell",
+      "cmd": "python -c \"import sapien.physx as physx; physx.enable_gpu()\" || true"
+    }
+  ],
+  "post_install_hooks": [],
+  "runtime_mounts": [],
+  "runtime_env_vars": [
+    {
+      "key": "VK_ICD_FILENAMES",
+      "value": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+      "evidence": "needs_vulkan_icd quirk: required for SAPIEN GPU rendering inside container"
+    }
+  ],
+  "evidence": {
+    "readme_quotes": [
+      "## Installation\nInstallation of ManiSkill is extremely simple, you only need to run a few pip installs and setup Vulkan for rendering.\n```bash\n# install the package\npip install --upgrade mani_skill\n# install a version of torch that is compatible with your system\npip install torch\n```",
+      "Finally you also need to set up Vulkan with [instructions here](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#vulkan)",
+      "setup.py: `'sapien>=3.0.0;platform_system==\"Linux\"'` (auto-installed by mani_skill dependency resolution)"
+    ],
+    "ambiguities": [
+      "README says 'pip install torch' with no version or CUDA variant. Host driver reports CUDA 12.8, so cu128 wheel index is used. If the container runs on a CUDA 11.x host, swap index URL to https://download.pytorch.org/whl/cu118.",
+      "README pins no specific mani_skill version. Used 3.0.0b22 matching the setup.py __version__ to guarantee reproducibility.",
+      "needs_setuptools_pin quirk: sapien uses pkg_resources which breaks with setuptools>=81. setuptools pin is injected TWICE — before main install and after — because sapien's transitive dep (triton) upgrades setuptools to 82+ during installation. Re-pinning after main install ensures the final venv state is setuptools<81.",
+      "needs_render_libs quirk: libegl1 / libosmesa6 required for headless rendering. README mentions Vulkan setup but not these apt packages explicitly; auto-injected from quirk.",
+      "policy-websocket (YufengJin fork) is a benchmark-generator addition from the previous verified run; preserved in the plan for benchmark compatibility."
+    ]
+  }
+}
