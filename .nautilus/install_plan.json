@@ -1,28 +1,22 @@
 {
   "primary_install_strategy": "uv-pip-editable",
   "system_apt_packages": [
-    "libegl1",
-    "libosmesa6",
-    "libgl1",
-    "libglib2.0-0",
-    "libvulkan1",
-    "vulkan-tools",
-    "ffmpeg",
-    "xvfb"
+    "libvulkan1", "vulkan-tools", "libvulkan-dev", "mesa-vulkan-drivers",
+    "libegl1", "libegl-mesa0", "libosmesa6",
+    "libjpeg-dev", "libpng-dev", "xvfb",
+    "libxrandr2", "libxcursor1", "libxdamage1", "libxi6", "libxtst6",
+    "ffmpeg", "libgl1-mesa-glx", "libglib2.0-0", "libgl1"
   ],
   "third_party_clones": [],
   "installation_steps": [
     {
       "kind": "apt_install",
       "pkgs": [
-        "libegl1",
-        "libosmesa6",
-        "libgl1",
-        "libglib2.0-0",
-        "libvulkan1",
-        "vulkan-tools",
-        "ffmpeg",
-        "xvfb"
+        "libvulkan1", "vulkan-tools", "libvulkan-dev", "mesa-vulkan-drivers",
+        "libegl1", "libegl-mesa0", "libosmesa6",
+        "libjpeg-dev", "libpng-dev", "xvfb",
+        "libxrandr2", "libxcursor1", "libxdamage1", "libxi6", "libxtst6",
+        "ffmpeg", "libgl1-mesa-glx", "libglib2.0-0", "libgl1"
       ]
     },
     {
@@ -44,10 +38,6 @@
     {
       "kind": "uv_pip_install",
       "args": ["--no-deps", "setuptools>=62.3,<81"]
-    },
-    {
-      "kind": "shell",
-      "cmd": "python -c \"import sapien.physx as physx; physx.enable_gpu()\" || true"
     }
   ],
   "post_install_hooks": [],
@@ -57,20 +47,36 @@
       "key": "VK_ICD_FILENAMES",
       "value": "/usr/share/vulkan/icd.d/nvidia_icd.json",
       "evidence": "needs_vulkan_icd quirk: required for SAPIEN GPU rendering inside container"
+    },
+    {
+      "key": "VK_LAYER_PATH",
+      "value": "/etc/vulkan/implicit_layer.d",
+      "evidence": "needs_vulkan_icd quirk: nvidia_layers.json location for Vulkan validation/optimus layer"
     }
   ],
   "evidence": {
     "readme_quotes": [
       "## Installation\nInstallation of ManiSkill is extremely simple, you only need to run a few pip installs and setup Vulkan for rendering.\n```bash\n# install the package\npip install --upgrade mani_skill\n# install a version of torch that is compatible with your system\npip install torch\n```",
-      "Finally you also need to set up Vulkan with [instructions here](https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/installation.html#vulkan)",
-      "setup.py: `'sapien>=3.0.0;platform_system==\"Linux\"'` (auto-installed by mani_skill dependency resolution)"
+      "Finally you also need to set up Vulkan with [instructions here](...)",
+      "sudo apt-get install libvulkan1 (installation.md Vulkan section)",
+      "If /usr/share/vulkan/icd.d/nvidia_icd.json does not exist, try to create the file... (installation.md)",
+      "If /etc/vulkan/implicit_layer.d/nvidia_layers.json does not exist, try to create the file... (installation.md)"
+    ],
+    "dockerfile_quotes": [
+      "RUN apt-get update && apt-get install -y ... libvulkan1 vulkan-tools libvulkan-dev mesa-vulkan-drivers libegl1 libegl-mesa0 libosmesa6 ...",
+      "COPY docker/nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json",
+      "COPY docker/nvidia_layers.json /etc/vulkan/implicit_layer.d/nvidia_layers.json",
+      "RUN uv pip install --no-deps 'setuptools>=62.3,<81' --index-strategy unsafe-best-match",
+      "RUN uv pip install torch --index-url https://download.pytorch.org/whl/cu128 --index-strategy unsafe-best-match",
+      "RUN uv pip install --upgrade mani_skill==3.0.0b22 --index-strategy unsafe-best-match"
     ],
     "ambiguities": [
-      "README says 'pip install torch' with no version or CUDA variant. Host driver reports CUDA 12.8, so cu128 wheel index is used. If the container runs on a CUDA 11.x host, swap index URL to https://download.pytorch.org/whl/cu118.",
-      "README pins no specific mani_skill version. Used 3.0.0b22 matching the setup.py __version__ to guarantee reproducibility.",
-      "needs_setuptools_pin quirk: sapien uses pkg_resources which breaks with setuptools>=81. setuptools pin is injected TWICE — before main install and after — because sapien's transitive dep (triton) upgrades setuptools to 82+ during installation. Re-pinning after main install ensures the final venv state is setuptools<81.",
-      "needs_render_libs quirk: libegl1 / libosmesa6 required for headless rendering. README mentions Vulkan setup but not these apt packages explicitly; auto-injected from quirk.",
-      "policy-websocket (YufengJin fork) is a benchmark-generator addition from the previous verified run; preserved in the plan for benchmark compatibility."
+      "README says 'pip install torch' with no version or CUDA variant. Host driver reports CUDA 12.8, so cu128 wheel index is used.",
+      "README pins no specific mani_skill version. Used 3.0.0b22 matching the setup.py __version__.",
+      "needs_setuptools_pin quirk: sapien uses pkg_resources which breaks with setuptools>=81. Pin injected before and after main install to survive transitive upgrades.",
+      "needs_render_libs quirk: libegl1 / libosmesa6 / libgl1 required for headless rendering.",
+      "needs_vulkan_icd quirk: expanded Vulkan apt set (libvulkan-dev, mesa-vulkan-drivers, libegl-mesa0) to ensure full ICD chain for SAPIEN3 in headless container.",
+      "policy-websocket (YufengJin fork) preserved from previous verified run for benchmark compatibility."
     ]
   }
 }

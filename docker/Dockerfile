@@ -15,7 +15,7 @@ ENV LANG=C.UTF-8
 RUN apt-get update && apt-get install -y \
     curl wget tar procps bzip2 ca-certificates git build-essential cmake unzip tmux \
     ffmpeg libgl1-mesa-glx libglib2.0-0 \
-    libegl1 libosmesa6 libgl1 libglib2.0-0 libvulkan1 vulkan-tools ffmpeg xvfb \
+    libvulkan1 vulkan-tools libvulkan-dev mesa-vulkan-drivers libegl1 libegl-mesa0 libosmesa6 libjpeg-dev libpng-dev xvfb libxrandr2 libxcursor1 libxdamage1 libxi6 libxtst6 ffmpeg libgl1-mesa-glx libglib2.0-0 libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
@@ -87,7 +87,6 @@ RUN uv pip install torch --index-url https://download.pytorch.org/whl/cu128 --in
 RUN uv pip install --upgrade mani_skill==3.0.0b22 --index-strategy unsafe-best-match
 RUN uv pip install 'policy-websocket @ git+https://github.com/YufengJin/policy_websocket.git' --index-strategy unsafe-best-match || true
 RUN uv pip install --no-deps 'setuptools>=62.3,<81' --index-strategy unsafe-best-match
-RUN python -c "import sapien.physx as physx; physx.enable_gpu()" || true
 
 # 
 # Slot for downstream sub-skills (benchmark / policy generators) to inject

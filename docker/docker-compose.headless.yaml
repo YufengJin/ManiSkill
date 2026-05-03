@@ -23,6 +23,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
       - VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
+      - VK_LAYER_PATH=/etc/vulkan/implicit_layer.d
       # <<<EXTENSION_ENV_INSERT_ABOVE>>> — sub-skills insert env vars above this line
 
     network_mode: host
@@ -32,6 +33,7 @@ services:
     volumes:
       - ..:/workspace/maniskill
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - /home/yjin/localdisk/nautilus-test/maniskill:/workspace/nautilus-test
       # <<<EXTENSION_VOLUME_INSERT_ABOVE>>> — sub-skills insert mounts above this line
       # Add dataset mounts:
       # - /path/to/datasets:/workspace/datasets:ro

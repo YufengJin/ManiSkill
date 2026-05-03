@@ -13,7 +13,7 @@ services:
       dockerfile: docker/Dockerfile
     # Default image tag for local from-scratch builds. Override with `IMAGE=...`
     # to point at a registry tag (e.g. `IMAGE=<hub-user>/maniskill:latest docker compose up`).
-    image: ${IMAGE:-yufengjin/maniskill:latest}
+    image: ${IMAGE:-maniskill:local}
     container_name: maniskill-gui
     restart: unless-stopped
     tty: true
@@ -31,6 +31,7 @@ services:
       # OpenGL / Vulkan stacks and are NOT affected.
       - MPLBACKEND=Agg
       - VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
+      - VK_LAYER_PATH=/etc/vulkan/implicit_layer.d
       # <<<EXTENSION_ENV_INSERT_ABOVE>>> — sub-skills insert env vars above this line
 
     volumes:
